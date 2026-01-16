@@ -85,5 +85,21 @@
     "ts-jest": "^29.4.1",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "nativeModules": {
+    "ios": {
+      "CoreML": [
+        "ios/AIImageForge/Native/CoreML/AIFCoreMLGeneratorEventEmitter.h",
+        "ios/AIImageForge/Native/CoreML/AIFCoreMLGeneratorEventEmitter.mm",
+        "ios/AIImageForge/Native/CoreML/AIFStableDiffusionEngine.swift",
+        "ios/AIImageForge/Native/CoreML/AIFCoreMLGeneratorModule.mm"
+      ],
+      "Metal": [
+        "ios/AIImageForge/Native/Metal/AIFMetalShaders.metal",
+        "ios/AIImageForge/Native/Metal/AIFMetalImageView.h",
+        "ios/AIImageForge/Native/Metal/AIFMetalImageView.mm",
+        "ios/AIImageForge/Native/Metal/AIFMetalImageViewManager.mm"
+      ]
+    }
+  }
 }
