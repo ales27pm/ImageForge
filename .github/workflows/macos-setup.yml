@@ -48,6 +48,11 @@ jobs:
           pod init
           pod install
 
+      - name: Ensure generated files are in ios directory
+        run: |
+          mkdir -p ios
+          cp -R path/to/generated/files/* ios/
+
       - name: Upload generated files
         uses: actions/upload-artifact@v4
         with:
