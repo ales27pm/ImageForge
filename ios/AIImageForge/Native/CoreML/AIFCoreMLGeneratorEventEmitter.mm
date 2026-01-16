@@ -1,25 +1,28 @@
 #import "AIFCoreMLGeneratorEventEmitter.h"
-#import <React/RCTBridge.h>
-#import <React/RCTEventDispatcher.h>
 
 @implementation AIFCoreMLGeneratorEventEmitter
 
-RCT_EXPORT_MODULE();
+RCT_EXPORT_MODULE(AIFCoreMLGeneratorEventEmitter)
+
++ (instancetype)shared {
+  static AIFCoreMLGeneratorEventEmitter *sEmitter = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    sEmitter = [AIFCoreMLGeneratorEventEmitter new];
+  });
+  return sEmitter;
+}
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"onCoreMLGenerationStart", @"onCoreMLGenerationProgress", @"onCoreMLGenerationComplete"];
+  return @[@"onGenerationProgress"];
 }
 
-- (void)sendCoreMLGenerationStart {
-    [self sendEventWithName:@"onCoreMLGenerationStart" body:nil];
-}
+- (void)startObserving {}
+- (void)stopObserving {}
 
-- (void)sendCoreMLGenerationProgress:(NSNumber *)progress {
-    [self sendEventWithName:@"onCoreMLGenerationProgress" body:@{ @"progress": progress }];
-}
-
-- (void)sendCoreMLGenerationComplete:(NSDictionary *)result {
-    [self sendEventWithName:@"onCoreMLGenerationComplete" body:result];
+- (void)emitProgressStep:(NSInteger)step total:(NSInteger)total {
+  [self sendEventWithName:@"onGenerationProgress"
+                     body:@{@"step": @(step), @"totalSteps": @(total)}];
 }
 
 @end

@@ -1,3 +1,6 @@
+import type { TurboModule } from "react-native";
+import { NativeEventEmitter, NativeModules, TurboModuleRegistry } from "react-native";
+
 // Event name string literal union
 export type CoreMLGeneratorEventName = "onGenerationProgress";
 
@@ -6,12 +9,6 @@ export interface CoreMLGenerationProgressEvent {
   step: number;
   totalSteps: number;
 }
-import type { TurboModule } from "react-native";
-import {
-  NativeEventEmitter,
-  NativeModules,
-  TurboModuleRegistry,
-} from "react-native";
 
 export type GenerateOptions = {
   stepCount?: number;
@@ -37,17 +34,19 @@ export interface Spec extends TurboModule {
   removeListeners(count: number): void;
 }
 
-const CoreMLGenerator = TurboModuleRegistry.get<Spec>("AIFCoreMLGenerator");
+// IMPORTANT: Default export helps codegen + RN patterns
+const AIFCoreMLGenerator = TurboModuleRegistry.get<Spec>("AIFCoreMLGenerator");
+export default AIFCoreMLGenerator;
+
 const eventEmitterModule =
-  NativeModules.AIFCoreMLGeneratorEventEmitter ??
-  NativeModules.AIFCoreMLGenerator ??
-  null;
+  NativeModules.AIFCoreMLGeneratorEventEmitter ?? NativeModules.AIFCoreMLGenerator ?? null;
+
 const coreMLGeneratorEventEmitter = eventEmitterModule
   ? new NativeEventEmitter(eventEmitterModule)
   : null;
 
 export function getCoreMLGenerator(): Spec | null {
-  return CoreMLGenerator ?? null;
+  return AIFCoreMLGenerator ?? null;
 }
 
 export function getCoreMLGeneratorEventEmitter(): NativeEventEmitter | null {
@@ -55,5 +54,5 @@ export function getCoreMLGeneratorEventEmitter(): NativeEventEmitter | null {
 }
 
 export function isCoreMLGeneratorAvailable(): boolean {
-  return !!CoreMLGenerator;
+  return !!AIFCoreMLGenerator;
 }

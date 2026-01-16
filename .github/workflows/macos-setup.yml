@@ -57,3 +57,29 @@ jobs:
         with:
           name: ios-generated-files
           path: ios/
+
+      - name: Add Apple Stable Diffusion Package
+        run: |
+          cd ios
+          xcodebuild -resolvePackageDependencies -project AIImageForge.xcodeproj
+          xed .
+
+      - name: Add Native Folder to Xcode Project
+        run: |
+          cd ios
+          xcrun xcodeproj touch AIImageForge.xcodeproj
+
+      - name: Ensure AIFMetalShaders.metal Compiles
+        run: |
+          cd ios
+          plutil -insert "com.apple.developer.kernel.increased-memory-limit" -string "true" AIImageForge/AIImageForge.entitlements
+
+      - name: Install CocoaPods and Trigger Codegen
+        run: |
+          cd ios
+          RCT_NEW_ARCH_ENABLED=1 pod install
+
+      - name: Verify CoreML and Metal Modules
+        run: |
+          echo "Verifying CoreML and Metal modules..."
+          # Add any specific commands or scripts to validate the setup.

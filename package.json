@@ -15,7 +15,9 @@
     "check:types": "tsc --noEmit",
     "check:format": "prettier --check \"**/*.{js,ts,tsx,css,json}\"",
     "format": "prettier --write \"**/*.{js,ts,tsx,css,json}\"",
-    "test": "jest"
+    "test": "jest",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
@@ -100,6 +102,14 @@
         "ios/AIImageForge/Native/Metal/AIFMetalImageView.mm",
         "ios/AIImageForge/Native/Metal/AIFMetalImageViewManager.mm"
       ]
+    }
+  },
+  "codegenConfig": {
+    "name": "AIFCoreMLGenerator",
+    "type": "modules",
+    "jsSrcsDir": "client/native",
+    "android": {
+      "javaPackageName": "com.aiimageforge"
     }
   }
 }
