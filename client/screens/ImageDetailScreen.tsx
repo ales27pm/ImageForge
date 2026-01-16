@@ -207,7 +207,8 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
         ]}
       >
         <View style={styles.imageContainer}>
-          {isMetalImageViewAvailable ? (
+          {isMetalImageViewAvailable &&
+            (image.imageData.startsWith("file://") || /^[A-Za-z]:\\|\//.test(image.imageData)) ? (
             <MetalImageView
               imageUri={image.imageData}
               tintColor={tintColor}

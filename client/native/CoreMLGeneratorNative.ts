@@ -1,3 +1,11 @@
+// Event name string literal union
+export type CoreMLGeneratorEventName = "onGenerationProgress";
+
+// Event payload interface for progress
+export interface CoreMLGenerationProgressEvent {
+  step: number;
+  totalSteps: number;
+}
 import type { TurboModule } from "react-native";
 import {
   NativeEventEmitter,

@@ -1,3 +1,125 @@
+// --- Progress controller helper ---
+function createProgressController({
+  totalSteps,
+  stepDuration,
+  setCurrentStep,
+  setProgress,
+}: {
+  totalSteps: number;
+  stepDuration: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  setProgress: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  let interval: ReturnType<typeof setInterval> | null = null;
+
+  const startInterval = () => {
+    interval = setInterval(() => {
+      setCurrentStep((prev) => {
+        const next = Math.min(prev + 1, totalSteps);
+        setProgress(next / totalSteps);
+        return next;
+      });
+    }, stepDuration);
+  };
+
+  const bindEmitter = (
+    emitter: ReturnType<typeof getCoreMLGeneratorEventEmitter> | undefined,
+    eventName: string,
+  ) => {
+    return (
+      emitter?.addListener(eventName, (event: CoreMLGenerationProgressEvent) => {
+        const total = event?.totalSteps ?? totalSteps;
+        const step = event?.step ?? 0;
+        setCurrentStep(step);
+        if (total > 0) setProgress(Math.min(step / total, 1));
+      }) ?? null
+    );
+  };
+
+  const complete = (stepCount: number) => {
+    setProgress(1);
+    setCurrentStep(stepCount);
+  };
+
+  const cleanup = () => {
+    if (interval) {
+      clearInterval(interval);
+      interval = null;
+    }
+  };
+
+  return { startInterval, bindEmitter, complete, cleanup };
+}
+// --- Generation helpers ---
+type GenerationResult = {
+  fileUri: string;
+  seed: number;
+  stepCount: number;
+  guidanceScale: number;
+};
+
+async function generateWithCoreML({
+  prompt,
+  steps,
+  seed,
+  guidanceScale,
+}: {
+  prompt: string;
+  steps: number;
+  seed?: number;
+  guidanceScale: number;
+}): Promise<GenerationResult> {
+  const coreMLGenerator = getCoreMLGenerator();
+  if (!coreMLGenerator) {
+    throw new Error("CoreML generator not available");
+  }
+  const result = await coreMLGenerator.generate(prompt, {
+    stepCount: steps,
+    seed,
+    guidanceScale,
+    width: 512,
+    height: 512,
+  });
+  return {
+    fileUri: result.fileUri,
+    seed: result.seed,
+    stepCount: result.stepCount,
+    guidanceScale: result.guidanceScale,
+  };
+}
+
+async function generateWithHttp({
+  prompt,
+  steps,
+  guidanceScale,
+  seed,
+}: {
+  prompt: string;
+  steps: number;
+  guidanceScale: number;
+  seed?: number;
+}): Promise<GenerationResult> {
+  const baseUrl = getApiUrl();
+  const response = await fetch(new URL("/api/generate-image", baseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to generate image");
+  }
+  const data = await response.json();
+  const fileUri = await saveBase64Image({
+    base64: data.b64_json,
+    mimeType: data.mimeType,
+  });
+  return {
+    fileUri,
+    seed: seed ?? Math.floor(Math.random() * 2147483647),
+    stepCount: steps,
+    guidanceScale,
+  };
+}
 import React, { useState, useRef } from "react";
 import {
   StyleSheet,
@@ -11,119 +133,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { HeaderButton } from "@react-navigation/elements";
-import { Feather } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import {
-  documentDirectory,
-  EncodingType,
-  makeDirectoryAsync,
-  writeAsStringAsync,
-} from "expo-file-system";
-import Slider from "@react-native-community/slider";
-import * as Haptics from "expo-haptics";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-
-import { ThemedText } from "@/components/ThemedText";
-import { Button } from "@/components/Button";
-import { ProgressBar } from "@/components/ProgressBar";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { saveImage, type GeneratedImage } from "@/lib/storage";
-import { getApiUrl } from "@/lib/query-client";
-import {
-  getCoreMLGenerator,
-  getCoreMLGeneratorEventEmitter,
-  isCoreMLGeneratorAvailable,
-} from "@/native/CoreMLGeneratorNative";
-import type { RootStackParamList } from "@/navigation/RootStackNavigator";
-
-type Props = NativeStackScreenProps<RootStackParamList, "Generation">;
-
-type GenerationState = "idle" | "generating" | "complete";
-
-const IMAGE_DIRECTORY = documentDirectory
-  ? `${documentDirectory}generated/`
-  : null;
-
-async function saveBase64Image({
-  base64,
-  mimeType,
-}: {
-  base64: string;
-  mimeType: string;
-}): Promise<string> {
-  if (Platform.OS === "web" || !IMAGE_DIRECTORY) {
-    return `data:${mimeType};base64,${base64}`;
-  }
-
-  try {
-    await makeDirectoryAsync(IMAGE_DIRECTORY, {
-      intermediates: true,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (!message.includes("exists")) {
-      throw error;
-    }
-  }
-
-  const extension = mimeType.split("/")[1] ?? "png";
-  const filename = `aiimageforge_${Date.now()}.${extension}`;
-  const fileUri = `${IMAGE_DIRECTORY}${filename}`;
-
-  await writeAsStringAsync(fileUri, base64, {
-    encoding: EncodingType.Base64,
-  });
-
-  return fileUri;
-}
-
-export default function GenerationScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
-  const headerHeight = useHeaderHeight();
-  const [prompt, setPrompt] = useState("");
-  const [state, setState] = useState<GenerationState>("idle");
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [steps, setSteps] = useState(25);
-  const [guidanceScale, setGuidanceScale] = useState(7.5);
-  const [seed, setSeed] = useState<number | null>(null);
-
-  const generatedImageRef = useRef<GeneratedImage | null>(null);
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <HeaderButton
-          onPress={() => navigation.goBack()}
-          pressColor="transparent"
-        >
-          <ThemedText style={{ color: Colors.dark.text }}>Cancel</ThemedText>
-        </HeaderButton>
-      ),
-      headerRight: () =>
-        state === "idle" ? (
-          <HeaderButton
-            onPress={handleGenerate}
-            disabled={!prompt.trim()}
-            pressColor="transparent"
-          >
-            <ThemedText
-              style={{
-                color: prompt.trim()
-                  ? Colors.dark.primary
-                  : Colors.dark.textSecondary,
-                fontWeight: "600",
-              }}
-            >
-              Generate
-            </ThemedText>
-          </HeaderButton>
-        ) : null,
-    });
-  }, [navigation, prompt, state]);
-
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
@@ -132,38 +141,69 @@ export default function GenerationScreen({ navigation }: Props) {
     setCurrentStep(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const coreMLGenerator = getCoreMLGenerator();
-    const useCoreML = isCoreMLGeneratorAvailable() && coreMLGenerator;
+    const useCoreML = isCoreMLGeneratorAvailable() && !!getCoreMLGenerator();
     const totalSteps = steps;
     const stepDuration = 200;
-    let progressInterval: ReturnType<typeof setInterval> | null = null;
+    const progressController = createProgressController({
+      totalSteps,
+      stepDuration,
+      setCurrentStep,
+      setProgress,
+    });
     const eventEmitter = getCoreMLGeneratorEventEmitter();
     const progressSubscription = useCoreML
-      ? eventEmitter?.addListener("onGenerationProgress", (event) => {
-          const total = event?.totalSteps ?? totalSteps;
-          const step = event?.step ?? 0;
-          setCurrentStep(step);
-          if (total > 0) {
-            setProgress(Math.min(step / total, 1));
-          }
-        })
+      ? progressController.bindEmitter(eventEmitter, "onGenerationProgress")
       : null;
 
     try {
       if (!useCoreML) {
-        progressInterval = setInterval(() => {
-          setCurrentStep((prev) => {
-            const next = Math.min(prev + 1, totalSteps);
-            setProgress(next / totalSteps);
-            return next;
-          });
-        }, stepDuration);
+        progressController.startInterval();
       }
 
-      if (useCoreML && coreMLGenerator) {
-        const result = await coreMLGenerator.generate(prompt.trim(), {
-          stepCount: steps,
-          seed: seed ?? undefined,
+      const result = useCoreML
+        ? await generateWithCoreML({
+            prompt: prompt.trim(),
+            steps,
+            seed: seed ?? undefined,
+            guidanceScale,
+          })
+        : await generateWithHttp({
+            prompt: prompt.trim(),
+            steps,
+            guidanceScale,
+            seed: seed ?? undefined,
+          });
+
+      const newImage: GeneratedImage = {
+        id: Date.now().toString(),
+        prompt: prompt.trim(),
+        imageData: result.fileUri,
+        seed: result.seed,
+        steps: result.stepCount,
+        guidanceScale: result.guidanceScale,
+        createdAt: new Date().toISOString(),
+      };
+
+      generatedImageRef.current = newImage;
+      setGeneratedImage(result.fileUri);
+      progressController.complete(result.stepCount);
+      setState("complete");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      progressController.cleanup();
+      console.error("Generation error:", error);
+      setState("idle");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Generation Failed",
+        "Unable to generate image. Please try again.",
+        [{ text: "OK" }],
+      );
+    } finally {
+      progressController.cleanup();
+      progressSubscription?.remove();
+    }
+  };
           guidanceScale,
           width: 512,
           height: 512,

@@ -3,6 +3,9 @@ const DEFAULT_RGB: [number, number, number] = [1, 1, 1];
 function normalizeHex(hex: string): string | null {
   const normalized = hex.trim().replace(/^#/, "");
   if (normalized.length === 3) {
+    if (!/^[0-9a-fA-F]{3}$/.test(normalized)) {
+      return null;
+    }
     return normalized
       .split("")
       .map((char) => char + char)
