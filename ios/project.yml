@@ -1,1 +1,11 @@
-Basic `project.yml` file for the Xcode project. It defines the project name, bundle ID prefix, deployment target, and a single application target.
+name: AIImageForge
+options:
+  bundleIdPrefix: com.ales27pm
+  deploymentTarget:
+    iOS: '14.0'
+targets:
+  AIImageForge:
+    type: application
+    platform: iOS
+    sources: [App]
+    resources: []
