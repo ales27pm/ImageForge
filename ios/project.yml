@@ -1,0 +1,1 @@
+Basic `project.yml` file for the Xcode project. It defines the project name, bundle ID prefix, deployment target, and a single application target.
