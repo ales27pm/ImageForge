@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -14,7 +14,11 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import * as FileSystem from "expo-file-system";
+import {
+  cacheDirectory,
+  EncodingType,
+  writeAsStringAsync,
+} from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import Animated, {
   useAnimatedStyle,
@@ -26,7 +30,17 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { deleteImage } from "@/lib/storage";
+import { applyAlphaToHex, hexToRgbFloat } from "@/lib/color";
+import {
+  defaultSettings,
+  deleteImage,
+  getSettings,
+  type UserSettings,
+} from "@/lib/storage";
+import {
+  MetalImageView,
+  isMetalImageViewAvailable,
+} from "@/native/MetalImageViewNative";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ImageDetail">;
@@ -36,6 +50,7 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
   const drawerHeight = useSharedValue(0);
 
   React.useLayoutEffect(() => {
@@ -56,21 +71,54 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
     });
   }, [navigation]);
 
+  useEffect(() => {
+    let isMounted = true;
+    getSettings()
+      .then((storedSettings) => {
+        if (isMounted) {
+          setSettings(storedSettings);
+        }
+      })
+      .catch((error) => {
+        console.error("Settings load error:", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleShare = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       if (Platform.OS === "web") {
         Alert.alert("Share", "Sharing is not available on web");
         return;
       }
 
-      const base64Data = image.imageData.split(",")[1];
-      const filename = `aiimageforge_${image.id}.png`;
-      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      if (image.imageData.startsWith("file://")) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(image.imageData);
+        } else {
+          await Share.share({
+            url: image.imageData,
+            message: `Check out this AI-generated image! Prompt: ${image.prompt}`,
+          });
+        }
+        return;
+      }
 
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+      const base64Data = image.imageData.split(",")[1];
+      if (!cacheDirectory) {
+        throw new Error("Cache directory unavailable");
+      }
+
+      const filename = `aiimageforge_${image.id}.png`;
+      const fileUri = `${cacheDirectory}${filename}`;
+
+      await writeAsStringAsync(fileUri, base64Data, {
+        encoding: EncodingType.Base64,
       });
 
       if (await Sharing.isAvailableAsync()) {
@@ -98,7 +146,9 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
           onPress: async () => {
             try {
               await deleteImage(image.id);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               navigation.goBack();
             } catch (error) {
               console.error("Delete error:", error);
@@ -106,7 +156,7 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -122,6 +172,16 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
   const drawerStyle = useAnimatedStyle(() => ({
     maxHeight: drawerHeight.value === 1 ? 500 : 120,
   }));
+
+  const tintColor = useMemo(
+    () => hexToRgbFloat(settings.tintColor),
+    [settings.tintColor],
+  );
+
+  const overlayColor = useMemo(
+    () => applyAlphaToHex(settings.tintColor, settings.tintIntensity),
+    [settings.tintColor, settings.tintIntensity],
+  );
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -147,13 +207,26 @@ export default function ImageDetailScreen({ navigation, route }: Props) {
         ]}
       >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: image.imageData }}
-            style={styles.image}
-            contentFit="contain"
-            transition={200}
-          />
-          <View style={styles.metalOverlay} />
+          {isMetalImageViewAvailable ? (
+            <MetalImageView
+              imageUri={image.imageData}
+              tintColor={tintColor}
+              tintIntensity={settings.tintIntensity}
+              style={styles.image}
+            />
+          ) : (
+            <>
+              <Image
+                source={{ uri: image.imageData }}
+                style={styles.image}
+                contentFit="contain"
+                transition={200}
+              />
+              <View
+                style={[styles.metalOverlay, { backgroundColor: overlayColor }]}
+              />
+            </>
+          )}
         </View>
       </ScrollView>
 

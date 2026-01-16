@@ -6,12 +6,19 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import {
+  documentDirectory,
+  EncodingType,
+  makeDirectoryAsync,
+  writeAsStringAsync,
+} from "expo-file-system";
 import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -21,12 +28,54 @@ import { Button } from "@/components/Button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { saveImage, type GeneratedImage } from "@/lib/storage";
-import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { getApiUrl } from "@/lib/query-client";
+import {
+  getCoreMLGenerator,
+  getCoreMLGeneratorEventEmitter,
+  isCoreMLGeneratorAvailable,
+} from "@/native/CoreMLGeneratorNative";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Generation">;
 
 type GenerationState = "idle" | "generating" | "complete";
+
+const IMAGE_DIRECTORY = documentDirectory
+  ? `${documentDirectory}generated/`
+  : null;
+
+async function saveBase64Image({
+  base64,
+  mimeType,
+}: {
+  base64: string;
+  mimeType: string;
+}): Promise<string> {
+  if (Platform.OS === "web" || !IMAGE_DIRECTORY) {
+    return `data:${mimeType};base64,${base64}`;
+  }
+
+  try {
+    await makeDirectoryAsync(IMAGE_DIRECTORY, {
+      intermediates: true,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("exists")) {
+      throw error;
+    }
+  }
+
+  const extension = mimeType.split("/")[1] ?? "png";
+  const filename = `aiimageforge_${Date.now()}.${extension}`;
+  const fileUri = `${IMAGE_DIRECTORY}${filename}`;
+
+  await writeAsStringAsync(fileUri, base64, {
+    encoding: EncodingType.Base64,
+  });
+
+  return fileUri;
+}
 
 export default function GenerationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -62,7 +111,9 @@ export default function GenerationScreen({ navigation }: Props) {
           >
             <ThemedText
               style={{
-                color: prompt.trim() ? Colors.dark.primary : Colors.dark.textSecondary,
+                color: prompt.trim()
+                  ? Colors.dark.primary
+                  : Colors.dark.textSecondary,
                 fontWeight: "600",
               }}
             >
@@ -81,18 +132,62 @@ export default function GenerationScreen({ navigation }: Props) {
     setCurrentStep(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    const coreMLGenerator = getCoreMLGenerator();
+    const useCoreML = isCoreMLGeneratorAvailable() && coreMLGenerator;
     const totalSteps = steps;
     const stepDuration = 200;
-
-    const progressInterval = setInterval(() => {
-      setCurrentStep((prev) => {
-        const next = Math.min(prev + 1, totalSteps);
-        setProgress(next / totalSteps);
-        return next;
-      });
-    }, stepDuration);
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+    const eventEmitter = getCoreMLGeneratorEventEmitter();
+    const progressSubscription = useCoreML
+      ? eventEmitter?.addListener("onGenerationProgress", (event) => {
+          const total = event?.totalSteps ?? totalSteps;
+          const step = event?.step ?? 0;
+          setCurrentStep(step);
+          if (total > 0) {
+            setProgress(Math.min(step / total, 1));
+          }
+        })
+      : null;
 
     try {
+      if (!useCoreML) {
+        progressInterval = setInterval(() => {
+          setCurrentStep((prev) => {
+            const next = Math.min(prev + 1, totalSteps);
+            setProgress(next / totalSteps);
+            return next;
+          });
+        }, stepDuration);
+      }
+
+      if (useCoreML && coreMLGenerator) {
+        const result = await coreMLGenerator.generate(prompt.trim(), {
+          stepCount: steps,
+          seed: seed ?? undefined,
+          guidanceScale,
+          width: 512,
+          height: 512,
+        });
+
+        const newImage: GeneratedImage = {
+          id: Date.now().toString(),
+          prompt: prompt.trim(),
+          imageData: result.fileUri,
+          seed: result.seed,
+          steps: result.stepCount,
+          guidanceScale: result.guidanceScale,
+          createdAt: new Date().toISOString(),
+        };
+
+        generatedImageRef.current = newImage;
+        setGeneratedImage(result.fileUri);
+        setProgress(1);
+        setCurrentStep(result.stepCount);
+        setState("complete");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        return;
+      }
+
       const baseUrl = getApiUrl();
       const response = await fetch(new URL("/api/generate-image", baseUrl), {
         method: "POST",
@@ -100,19 +195,18 @@ export default function GenerationScreen({ navigation }: Props) {
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
-      clearInterval(progressInterval);
-      setProgress(1);
-      setCurrentStep(totalSteps);
-
       if (!response.ok) {
         throw new Error("Failed to generate image");
       }
 
       const data = await response.json();
-      const imageData = `data:${data.mimeType};base64,${data.b64_json}`;
-      
+      const imageData = await saveBase64Image({
+        base64: data.b64_json,
+        mimeType: data.mimeType,
+      });
+
       const usedSeed = seed ?? Math.floor(Math.random() * 2147483647);
-      
+
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
         prompt: prompt.trim(),
@@ -125,18 +219,27 @@ export default function GenerationScreen({ navigation }: Props) {
 
       generatedImageRef.current = newImage;
       setGeneratedImage(imageData);
+      setProgress(1);
+      setCurrentStep(totalSteps);
       setState("complete");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       console.error("Generation error:", error);
       setState("idle");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Generation Failed",
         "Unable to generate image. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      progressSubscription?.remove();
     }
   };
 
