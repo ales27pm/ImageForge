@@ -1,30 +1,24 @@
 import React, { ReactNode } from "react";
-import { StyleSheet, Pressable, ViewStyle, StyleProp } from "react-native";
+import { StyleSheet, Pressable, ViewStyle, StyleProp, ActivityIndicator } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  WithSpringConfig,
 } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
-import { BorderRadius, Spacing } from "@/constants/theme";
+import { BorderRadius, Spacing, Colors } from "@/constants/theme";
 
 interface ButtonProps {
   onPress?: () => void;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
+  loading?: boolean;
+  variant?: "primary" | "secondary" | "destructive";
 }
-
-const springConfig: WithSpringConfig = {
-  damping: 15,
-  mass: 0.3,
-  stiffness: 150,
-  overshootClamping: true,
-  energyThreshold: 0.001,
-};
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -33,6 +27,8 @@ export function Button({
   children,
   style,
   disabled = false,
+  loading = false,
+  variant = "primary",
 }: ButtonProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
@@ -42,39 +38,62 @@ export function Button({
   }));
 
   const handlePressIn = () => {
-    if (!disabled) {
-      scale.value = withSpring(0.98, springConfig);
+    if (!disabled && !loading) {
+      scale.value = withSpring(0.97, { damping: 15, stiffness: 200 });
     }
   };
 
   const handlePressOut = () => {
-    if (!disabled) {
-      scale.value = withSpring(1, springConfig);
+    if (!disabled && !loading) {
+      scale.value = withSpring(1, { damping: 15, stiffness: 200 });
     }
+  };
+
+  const handlePress = () => {
+    if (!disabled && !loading) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPress?.();
+    }
+  };
+
+  const getBackgroundColor = () => {
+    if (variant === "destructive") return Colors.dark.error;
+    if (variant === "secondary") return Colors.dark.backgroundSecondary;
+    return theme.primary;
+  };
+
+  const getTextColor = () => {
+    if (variant === "destructive") return "#FFFFFF";
+    if (variant === "secondary") return theme.text;
+    return theme.buttonText;
   };
 
   return (
     <AnimatedPressable
-      onPress={disabled ? undefined : onPress}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      disabled={disabled}
+      disabled={disabled || loading}
       style={[
         styles.button,
         {
-          backgroundColor: theme.link,
+          backgroundColor: getBackgroundColor(),
           opacity: disabled ? 0.5 : 1,
         },
         style,
         animatedStyle,
       ]}
     >
-      <ThemedText
-        type="body"
-        style={[styles.buttonText, { color: theme.buttonText }]}
-      >
-        {children}
-      </ThemedText>
+      {loading ? (
+        <ActivityIndicator color={getTextColor()} />
+      ) : (
+        <ThemedText
+          type="body"
+          style={[styles.buttonText, { color: getTextColor() }]}
+        >
+          {children}
+        </ThemedText>
+      )}
     </AnimatedPressable>
   );
 }
@@ -85,6 +104,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: Spacing["2xl"],
   },
   buttonText: {
     fontWeight: "600",

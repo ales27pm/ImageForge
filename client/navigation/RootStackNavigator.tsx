@@ -1,12 +1,17 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+import GalleryScreen from "@/screens/GalleryScreen";
+import GenerationScreen from "@/screens/GenerationScreen";
+import ImageDetailScreen from "@/screens/ImageDetailScreen";
+import SettingsScreen from "@/screens/SettingsScreen";
+import type { GeneratedImage } from "@/lib/storage";
 
 export type RootStackParamList = {
-  Main: undefined;
-  Modal: undefined;
+  Gallery: undefined;
+  Generation: undefined;
+  ImageDetail: { image: GeneratedImage };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -17,16 +22,33 @@ export default function RootStackNavigator() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
-        name="Main"
-        component={MainTabNavigator}
-        options={{ headerShown: false }}
+        name="Gallery"
+        component={GalleryScreen}
+        options={{
+          headerTitle: "Gallery",
+        }}
       />
       <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
+        name="Generation"
+        component={GenerationScreen}
         options={{
           presentation: "modal",
-          headerTitle: "Modal",
+          headerTitle: "Create",
+        }}
+      />
+      <Stack.Screen
+        name="ImageDetail"
+        component={ImageDetailScreen}
+        options={{
+          presentation: "modal",
+          headerTitle: "",
+        }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerTitle: "Settings",
         }}
       />
     </Stack.Navigator>

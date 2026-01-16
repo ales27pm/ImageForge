@@ -1,12 +1,12 @@
 import { Text, type TextProps } from "react-native";
 
 import { useTheme } from "@/hooks/useTheme";
-import { Typography } from "@/constants/theme";
+import { Typography, Colors } from "@/constants/theme";
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: "h1" | "h2" | "h3" | "h4" | "body" | "small" | "link";
+  type?: "display" | "h1" | "h2" | "h3" | "h4" | "headline" | "body" | "small" | "caption" | "link";
 };
 
 export function ThemedText({
@@ -31,11 +31,17 @@ export function ThemedText({
       return theme.link;
     }
 
+    if (type === "caption" || type === "small") {
+      return theme.textSecondary;
+    }
+
     return theme.text;
   };
 
   const getTypeStyle = () => {
     switch (type) {
+      case "display":
+        return Typography.display;
       case "h1":
         return Typography.h1;
       case "h2":
@@ -44,10 +50,14 @@ export function ThemedText({
         return Typography.h3;
       case "h4":
         return Typography.h4;
+      case "headline":
+        return Typography.headline;
       case "body":
         return Typography.body;
       case "small":
         return Typography.small;
+      case "caption":
+        return Typography.caption;
       case "link":
         return Typography.link;
       default:
