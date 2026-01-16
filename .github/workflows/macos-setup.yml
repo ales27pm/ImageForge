@@ -25,9 +25,6 @@ jobs:
         run: |
           gem install cocoapods
 
-      - name: Ensure ios directory exists
-        run: mkdir -p ios
-
       - name: Install XcodeGen
         run: |
           brew install xcodegen
@@ -54,11 +51,6 @@ jobs:
           ls -R
           echo "Listing contents of ios directory:"
           ls -R ios
-
-      - name: Ensure generated files are in ios directory
-        run: |
-          mkdir -p ios
-          cp -R correct/path/to/generated/files/* ios/
 
       - name: Upload generated files
         uses: actions/upload-artifact@v4
