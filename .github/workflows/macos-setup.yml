@@ -25,27 +25,19 @@ jobs:
         run: |
           gem install cocoapods
 
-      - name: Initialize and Install Pods
+      - name: Ensure ios directory exists
+        run: mkdir -p ios
+
+      - name: Create Xcode project
+        run: |
+          cd ios
+          xcodebuild -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
+
+      - name: Initialize CocoaPods
         run: |
           cd ios
           pod init
           pod install
-
-      - name: Verify Xcode Project
-        run: |
-          xcodebuild -list
-
-      - name: Build Project
-        run: |
-          xcodebuild -workspace ios/AIImageForge.xcworkspace -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
-
-      - name: Create ios directory
-        run: mkdir -p ios
-
-      - name: Initialize Xcode project
-        run: |
-          cd ios
-          xcodebuild -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
 
       - name: Upload generated files
         uses: actions/upload-artifact@v4
