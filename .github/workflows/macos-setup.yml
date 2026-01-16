@@ -38,3 +38,17 @@ jobs:
       - name: Build Project
         run: |
           xcodebuild -workspace ios/AIImageForge.xcworkspace -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
+
+      - name: Create ios directory
+        run: mkdir -p ios
+
+      - name: Initialize Xcode project
+        run: |
+          cd ios
+          xcodebuild -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
+
+      - name: Upload generated files
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-generated-files
+          path: ios/
