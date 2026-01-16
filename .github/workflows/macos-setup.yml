@@ -48,7 +48,7 @@ jobs:
           xcodebuild -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
 
       - name: Upload generated files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-generated-files
           path: ios/
