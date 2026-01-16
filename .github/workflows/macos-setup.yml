@@ -28,6 +28,10 @@ jobs:
       - name: Ensure ios directory exists
         run: mkdir -p ios
 
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+
       - name: Create Xcode project
         run: |
           cd ios
