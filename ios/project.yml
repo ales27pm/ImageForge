@@ -1,0 +1,17 @@
+name: AIImageForge
+options:
+  bundleIdPrefix: com.aiimageforge
+  deploymentTarget:
+    iOS: '14.0'
+schemes:
+  AIImageForge:
+    build:
+      targets:
+        AIImageForge: all
+targets:
+  AIImageForge:
+    type: application
+    platform: iOS
+    sources: AIImageForge
+    resources: []
+    dependencies: []
