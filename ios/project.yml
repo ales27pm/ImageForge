@@ -9,3 +9,5 @@ targets:
     platform: iOS
     sources: [App]
     resources: []
+    settings:
+      INFOPLIST_FILE: App/Info.plist
