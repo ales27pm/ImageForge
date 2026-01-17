@@ -12,6 +12,10 @@ targets:
   AIImageForge:
     type: application
     platform: iOS
-    sources: AIImageForge
-    resources: []
-    dependencies: []
+    sources:
+      - AIImageForge
+      - ml-stable-diffusion/swift/StableDiffusion
+    resources:
+      - ml-stable-diffusion/assets
+    dependencies:
+      - framework: StableDiffusion.framework

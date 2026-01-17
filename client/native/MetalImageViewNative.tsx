@@ -1,10 +1,10 @@
 import React from "react";
 import {
   Platform,
-  requireNativeComponent,
   UIManager,
   type ViewProps,
 } from "react-native";
+import codegenNativeComponent from "react-native/Libraries/Utilities/codegenNativeComponent";
 
 export type MetalImageViewProps = ViewProps & {
   imageUri?: string;
@@ -19,7 +19,7 @@ const hasViewManager =
   UIManager.getViewManagerConfig(VIEW_NAME);
 
 const NativeMetalImageView = hasViewManager
-  ? requireNativeComponent<MetalImageViewProps>(VIEW_NAME)
+  ? codegenNativeComponent<MetalImageViewProps>(VIEW_NAME)
   : null;
 
 export const MetalImageView = (props: MetalImageViewProps) => {

@@ -1,3 +1,5 @@
+// Drizzle configuration file for database migrations and schema management
+// Ensure DATABASE_URL is set in the environment variables before running this configuration
 import { defineConfig } from "drizzle-kit";
 
 if (!process.env.DATABASE_URL) {

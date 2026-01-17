@@ -36,18 +36,72 @@ target 'AIImageForge' do
     ]
   end
 
-  config = use_native_modules!(config_command)
+  # Ensure config is initialized
+  config = use_native_modules! unless defined?(config)
+
+  # Debug and fallback for config
+  puts "Config: #{config.inspect}"
+  config ||= {}
+  config[:reactNativePath] ||= '../node_modules/react-native'
+  config[:reactNativeCodegenPath] ||= '../node_modules/react-native-codegen'
 
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
 
-  use_react_native!(
-    :path => config[:reactNativePath],
-    :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
-    # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/..",
-    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
-  )
+  # Manually configure React Native dependencies
+  pod 'React', :path => '../node_modules/react-native/'
+  pod 'React-Core', :path => '../node_modules/react-native/React-Core', :modular_headers => true, :version => '0.83.1'
+  pod 'React-RCTAppDelegate', :path => '../node_modules/react-native/React-RCTAppDelegate'
+  pod 'React-RCTFabric', :path => '../node_modules/react-native/React-RCTFabric'
+  pod 'React-Codegen', :path => '../node_modules/react-native/React-Codegen'
+  pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
+  pod 'FBLazyVector', :path => '../node_modules/react-native/Libraries/FBLazyVector'
+  pod 'FBReactNativeSpec', :path => '../node_modules/react-native/React/FBReactNativeSpec'
+  pod 'RCTRequired', :path => '../node_modules/react-native/Libraries/RCTRequired'
+  pod 'RCTTypeSafety', :path => '../node_modules/react-native/Libraries/TypeSafety'
+  pod 'ReactCommon', :path => '../node_modules/react-native/ReactCommon'
+  pod 'React-graphics', :path => '../node_modules/react-native/Libraries/Renderer/React-graphics'
+  pod 'React-utils', :path => File.expand_path('../custom_podspecs', __dir__)
+  pod 'React-debug', :path => '../node_modules/react-native/Libraries/Utilities/React-debug'
+  pod 'React-ImageManager', :path => '../node_modules/react-native/Libraries/Image/React-ImageManager'
+  pod 'React-rendererdebug', :path => '../node_modules/react-native/Libraries/Renderer/React-rendererdebug'
+  pod 'React-jsi', :path => '../node_modules/react-native/ReactCommon/jsi'
+  pod 'React-renderercss', :path => '../node_modules/react-native/Libraries/Renderer/React-renderercss'
+  pod 'ReactAppDependencyProvider', :path => './ReactAppDependencyProvider.podspec'
+
+  # Explicitly include React-RCTActionSheet
+  pod 'React-RCTActionSheet', :path => '../node_modules/react-native/Libraries/ActionSheetIOS'
+
+  # Explicitly include React-RCTAnimation
+  pod 'React-RCTAnimation', :path => '../node_modules/react-native/Libraries/NativeAnimation'
+
+  # Explicitly include React-RCTBlob
+  pod 'React-RCTBlob', :path => '../node_modules/react-native/Libraries/Blob'
+
+  # Explicitly include React-RCTImage
+  pod 'React-RCTImage', :path => '../node_modules/react-native/Libraries/Image'
+
+  # Explicitly include React-RCTLinking
+  pod 'React-RCTLinking', :path => '../node_modules/react-native/Libraries/LinkingIOS'
+
+  # Explicitly include React-RCTNetwork
+  pod 'React-RCTNetwork', :path => '../node_modules/react-native/Libraries/Network'
+
+  # Explicitly include React-RCTSettings
+  pod 'React-RCTSettings', :path => '../node_modules/react-native/Libraries/Settings'
+
+  # Explicitly include React-RCTText
+  pod 'React-RCTText', :path => '../node_modules/react-native/Libraries/Text'
+
+  # Explicitly include React-RCTVibration
+  pod 'React-RCTVibration', :path => '../node_modules/react-native/Libraries/Vibration'
+
+  # Debugging paths for React-utils
+  puts "React-utils path: #{File.expand_path('../node_modules/react-native/Libraries/Utilities', __dir__)}"
+  puts "React-utils podspec exists: #{File.exist?(File.expand_path('../node_modules/react-native/Libraries/Utilities/React-utils.podspec', __dir__))}"
+
+  # Add StableDiffusion dependency
+  pod 'StableDiffusion', :path => File.expand_path('../ios/ml-stable-diffusion/swift/StableDiffusion', __dir__)
 
   post_install do |installer|
     react_native_post_install(

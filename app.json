@@ -4,32 +4,36 @@
     "slug": "aiimageforge",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "aiimageforge",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aiimageforge.app"
+      "bundleIdentifier": "com.aiimageforge.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to save generated images.",
+        "NSCameraUsageDescription": "This app requires access to your camera to capture images."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0F",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/app-icon.png"
       },
       "package": "com.aiimageforge.app",
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "versionCode": 1
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-screen.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0A0A0F",
@@ -37,11 +41,7 @@
             "backgroundColor": "#0A0A0F"
           }
         }
-      ],
-      "expo-web-browser"
-    ],
-    "experiments": {
-      "reactCompiler": true
-    }
+      ]
+    ]
   }
 }
