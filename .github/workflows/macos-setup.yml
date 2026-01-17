@@ -105,17 +105,9 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath ios/build
 
-      - name: Authenticate with App Store Connect
-        uses: apple-actions/app-store-connect-auth@v1
-        with:
-          api-key-id: ${{ secrets.APP_STORE_API_KEY_ID }}
-          api-key-issuer-id: ${{ secrets.APP_STORE_API_KEY_ISSUER_ID }}
-          api-private-key: ${{ secrets.APP_STORE_API_PRIVATE_KEY }}
-
-      - name: Upload to App Store Connect
+      - name: Authenticate with App Store Connect using Fastlane
         run: |
-          xcrun altool --upload-app \
-            --type ios \
-            --file ios/build/ImageForge.ipa \
-            --apiKey ${{ secrets.APP_STORE_API_KEY_ID }} \
-            --apiIssuer ${{ secrets.APP_STORE_API_KEY_ISSUER_ID }}
+          gem install fastlane
+          fastlane pilot upload \
+            --api_key_path ${{ secrets.APP_STORE_API_KEY_PATH }} \
+            --ipa ios/build/ImageForge.ipa
