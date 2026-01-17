@@ -59,5 +59,20 @@ target 'AIImageForge' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+    # --- BREAK ReactCodegen ↔ app target cycle (Xcode archive) ---
+    installer.pods_project.targets.each do |t|
+      next unless t.name == 'ReactCodegen'
+
+      t.shell_script_build_phases.each do |phase|
+        next unless phase.name && phase.name.include?('Generate Specs')
+
+        if phase.respond_to?(:input_paths) && phase.input_paths
+          phase.input_paths = phase.input_paths.reject do |p|
+            p.include?('ExpoModulesProvider.swift') ||
+            p.include?('Pods-AIImageForge')
+          end
+        end
+      end
+    end
   end
 end
