@@ -38,7 +38,9 @@ function checkNodeEnv() {
   const node = process.version;
   let npm;
   try {
-    npm = require('child_process').execSync('npm -v').toString().trim();
+    npm = (typeof require !== 'undefined')
+      ? require('child_process').execSync('npm -v').toString().trim()
+      : undefined;
   } catch (e) {
     log('[WARN] npm -v failed: ' + (e && e.message ? e.message : e));
     npm = undefined;
@@ -60,14 +62,17 @@ function checkNodeEnv() {
   }
   if (env.EAS_BUILD_PLATFORM === 'ios') {
     try {
-      require('child_process').execSync('xcodebuild -version', { stdio: 'ignore' });
+      if (typeof require !== 'undefined') {
+        require('child_process').execSync('xcodebuild -version', { stdio: 'ignore' });
+      }
     } catch {
       log('[WARN] xcodebuild not available on macOS runner.');
     }
-    if (!node || !npm) fail('Missing node or npm.', { details: { node, npm } });
+    if (!node) fail('Missing node.', { details: { node, npm } });
+    if (!npm) log('[WARN] npm not found, but not required for preflight.');
   } else {
     if (!node) fail('Missing node.', { details: { node, npm } });
-    if (!npm) log('[WARN] npm not found, but not required on non-macOS platform.');
+    if (!npm) log('[WARN] npm not found, but not required for preflight.');
   }
   return { node, npm, platform, env: redactEnv(env) };
 }
