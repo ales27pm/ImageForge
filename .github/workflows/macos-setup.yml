@@ -98,7 +98,8 @@ jobs:
             echo "No ios/project.yml found; skipping xcodegen generate."
           fi
 
-      - name: Install Pods
+      - name: Install Pods (macOS only)
+        if: runner.os == 'macOS'
         shell: bash
         run: |
           set -euo pipefail
