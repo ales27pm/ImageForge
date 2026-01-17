@@ -2,164 +2,88 @@ name: macOS Setup and Deployment
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
 
-jobs:
-  setup-and-deploy:
-    name: Setup and Deploy macOS App
-    runs-on: macos-latest
-    steps:
-      - name: Install Node.js dependencies
-        run: |
-          cd ${{ github.workspace }}/..
-          npm install
-      - name: Install Node.js dependencies (ios)
-        run: |
-          cd ios
-          npm install
-      - name: Install Node.js dependencies
-        run: |
-          cd ${{ github.workspace }}
-          npm install
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    name: macOS Setup and Deployment
 
-      - name: Set up Ruby for CocoaPods
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.0
+    on:
+      push:
+        branches: [main]
+      pull_request:
+        branches: [main]
+      workflow_dispatch:
 
-      - name: Install CocoaPods
-        run: |
-          gem install cocoapods
+    jobs:
+      setup-and-deploy:
+        runs-on: macos-latest
 
-      - name: Install XcodeGen
-        run: |
-          brew install xcodegen
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
 
+          - name: Detect project root (where package.json lives)
+            shell: bash
+            run: |
+              set -euo pipefail
+              if [ -f "${GITHUB_WORKSPACE}/package.json" ]; then
+                echo "PROJECT_DIR=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+              elif [ -f "${GITHUB_WORKSPACE}/ImageForge-main/package.json" ]; then
+                echo "PROJECT_DIR=${GITHUB_WORKSPACE}/ImageForge-main" >> "$GITHUB_ENV"
+              else
+                echo "ERROR: package.json not found in repo root or ImageForge-main/"
+                echo "Repo contents:"
+                ls -la "${GITHUB_WORKSPACE}"
+                exit 1
+              fi
+              echo "Using PROJECT_DIR=$PROJECT_DIR"
 
-      - name: Create Xcode project
-        run: |
-          cd ios
-          xcodegen generate
+          - name: Set up Node
+            uses: actions/setup-node@v4
+            with:
+              node-version: "20"
+              cache: npm
+              cache-dependency-path: |
+                package-lock.json
+                ImageForge-main/package-lock.json
+                ios/package-lock.json
+                ImageForge-main/ios/package-lock.json
 
-      - name: Ensure StableDiffusion.framework exists
-        run: |
-          mkdir -p ios/ml-stable-diffusion/swift/StableDiffusion/StableDiffusion.framework
-          if [ ! -f ios/ml-stable-diffusion/swift/StableDiffusion/StableDiffusion.framework/README.txt ]; then
-            echo "Placeholder for StableDiffusion.framework" > ios/ml-stable-diffusion/swift/StableDiffusion/StableDiffusion.framework/README.txt
-          fi
+          - name: Install Node dependencies (root)
+            shell: bash
+            run: |
+              set -euo pipefail
+              cd "$PROJECT_DIR"
+              npm ci || npm install
 
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install
+          - name: Install Node dependencies (ios)
+            shell: bash
+            run: |
+              set -euo pipefail
+              cd "$PROJECT_DIR/ios"
+              npm ci || npm install
 
-      - name: Build Xcode workspace
-        run: |
-          cd ios
-          xcodebuild -workspace ImageForge.xcworkspace -scheme AIImageForge -sdk iphonesimulator -configuration Debug build
+          - name: Set up Ruby for CocoaPods
+            uses: ruby/setup-ruby@v1
+            with:
+              ruby-version: "3.2"
+              bundler-cache: false
 
-      - name: Upload generated files
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-generated-files
-          path: ios/
+          - name: Install CocoaPods
+            run: gem install cocoapods
 
-      - name: Debug file paths
-        run: |
-          echo "Listing contents of current directory:"
-          ls -R
-          echo "Listing contents of ios directory:"
-          ls -R ios
+          - name: Install XcodeGen
+            run: brew install xcodegen
 
-      - name: Add Apple Stable Diffusion Package
-        run: |
-          cd ios
-          xcodebuild -resolvePackageDependencies -project AIImageForge.xcodeproj
-          xed .
+          - name: Create Xcode project
+            shell: bash
+            run: |
+              set -euo pipefail
+              cd "$PROJECT_DIR/ios"
+              xcodegen generate
 
-      - name: Add Native Folder to Xcode Project
-        run: |
-          cd ios
-          xcrun xcodeproj touch AIImageForge.xcodeproj
-
-      - name: Ensure AIFMetalShaders.metal Compiles
-        run: |
-          cd ios
-          plutil -insert "com.apple.developer.kernel.increased-memory-limit" -string "true" AIImageForge/AIImageForge.entitlements
-
-      - name: Install CocoaPods and Trigger Codegen
-        run: |
-          cd ios
-          RCT_NEW_ARCH_ENABLED=1 pod install
-
-      - name: Verify CoreML and Metal Modules
-        run: |
-          echo "Verifying CoreML and Metal modules..."
-          # Add any specific commands or scripts to validate the setup.
-
-      - name: Configure Expo
-        run: expo prebuild --platform ios
-
-      - name: Ensure Xcode Command Line Tools are Installed
-        run: |
-          xcode-select --install || echo "Xcode Command Line Tools already installed."
-
-      - name: Set Up Fastlane for Deployment
-        run: |
-          gem install fastlane
-
-      - name: Build and Archive iOS App
-        run: |
-          cd ios
-          xcodebuild -workspace ImageForge.xcworkspace \
-            -scheme ImageForge \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath $PWD/build/ImageForge.xcarchive archive
-
-      - name: Export iOS App for App Store
-        run: |
-          cd ios
-          xcodebuild -exportArchive \
-            -archivePath build/ImageForge.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build
-
-      - name: Deploy to App Store Connect
-        run: |
-          cd ios
-          fastlane pilot upload \
-            --api_key_path ${{ secrets.APP_STORE_API_KEY_PATH }} \
-            --ipa build/ImageForge.ipa
-
-      - name: Update Homebrew
-        run: |
-          brew update
-
-      - name: Clean Build Directory
-        run: |
-          cd ios
-          rm -rf DerivedData
-
-      - name: Run Unit Tests
-        run: |
-          cd ios
-          xcodebuild test -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 14' -configuration Debug
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: ios/build/Debug-iphonesimulator/AIImageForge.app
-
-      - name: Fail on Errors
-        if: failure()
-        run: |
+          - name: Install Pods
+            shell: bash
+            run: |
+              set -euo pipefail
+              cd "$PROJECT_DIR/ios"
+              pod install
           echo "Workflow failed. Please check the logs."
