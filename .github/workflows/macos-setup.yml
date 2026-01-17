@@ -49,7 +49,14 @@ jobs:
           cd "$PROJECT_DIR"
           npm ci || npm install
 
-      # Optionally symlink node_modules for Podfile lookup
+      # Generate codegen specs, needed for new React Native versions
+      - name: Generate codegen specs (if needed)
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR"
+          npx react-native-codegen || echo "react-native-codegen not needed/skipped"
+
+      # Optionally symlink node_modules for Podfile lookup (RN/Expo)
       - name: Symlink node_modules for Podfile lookup (if missing)
         shell: bash
         run: |
