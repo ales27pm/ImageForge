@@ -68,7 +68,6 @@ target 'AIImageForge' do
         # Xcode 16: prevent cycle by clearing input/output paths and always running the script
         phase.input_paths = []
         phase.output_paths = []
-        phase.alwaysOutOfDate = "1" # disables dependency analysis for this phase (Xcodeproj expects string)
         # (Required for Xcode 16+ to avoid archive-time build graph cycles)
       end
     end
