@@ -1,4 +1,4 @@
-name: macOS Setup
+name: macOS Setup and Deployment
 
 on:
   push:
@@ -7,9 +7,11 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  setup-macos:
+  setup-and-deploy:
+    name: Setup and Deploy macOS App
     runs-on: macos-latest
 
     steps:
@@ -83,34 +85,6 @@ jobs:
         run: |
           echo "Verifying CoreML and Metal modules..."
           # Add any specific commands or scripts to validate the setup.
-
-name: macOS App Store Deployment
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-jobs:
-  build-and-deploy:
-    name: Build and Deploy to App Store Connect
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install CocoaPods
-        run: pod install --project-directory=ios
 
       - name: Configure Expo
         run: expo prebuild --platform ios
