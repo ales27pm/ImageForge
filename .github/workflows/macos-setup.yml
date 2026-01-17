@@ -1,16 +1,12 @@
+
 name: macOS Setup and Deployment
 
 on:
   push:
-
-    name: macOS Setup and Deployment
-
-    on:
-      push:
-        branches: [main]
-      pull_request:
-        branches: [main]
-      workflow_dispatch:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
     jobs:
       setup-and-deploy:
