@@ -9,7 +9,7 @@ on:
 
 jobs:
   setup-and-deploy:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,27 +56,15 @@ jobs:
             ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
           fi
 
-      - name: Generate codegen specs (if needed)
+      # Remove manual codegen step; Expo handles this
+
+      - name: Install Ruby gems (Bundler)
         shell: bash
         run: |
-          cd "$PROJECT_DIR"
-          npx react-native-codegen || echo "codegen not needed or already run"
-
-      - name: Set up Ruby for CocoaPods
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: false
-
-      - name: Install CocoaPods
-        run: gem install cocoapods
-
-      - name: Clean CocoaPods cache and Pods directory
-        shell: bash
-        run: |
+          set -euo pipefail
           cd "$PROJECT_DIR/ios"
-          pod cache clean --all || true
-          rm -rf Pods Podfile.lock
+          gem install bundler
+          bundle install
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -88,12 +76,13 @@ jobs:
           cd "$PROJECT_DIR/ios"
           xcodegen generate
 
-      - name: Install Pods (with verbose log)
+      - name: Install Pods
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf ~/Library/Developer/Xcode/DerivedData
           cd "$PROJECT_DIR/ios"
-          pod install --verbose
+          bundle exec pod install --verbose
 
       - name: Fail on Errors
         if: failure()

@@ -1,116 +1,44 @@
+
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 require 'json'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
-def ccache_enabled?(podfile_properties)
-  return ENV['USE_CCACHE'] == '1' if ENV['USE_CCACHE']
-  podfile_properties['apple.ccacheEnabled'] == 'true'
-end
-
-ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == 'false'
-ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
-ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
-ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
 platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
 project 'AIImageForge.xcodeproj'
 
+# Force New Architecture ON
+ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+
 target 'AIImageForge' do
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
-    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
+    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"]
   else
-    config_command = [
-      'npx',
-      'expo-modules-autolinking',
-      'react-native-config',
-      '--json',
-      '--platform',
-      'ios'
-    ]
+    config_command = ['npx', 'expo-modules-autolinking', 'react-native-config', '--json', '--platform', 'ios']
   end
 
-  config = use_native_modules! unless defined?(config)
-  puts "Config: #{config.inspect}"
-  config ||= {}
+  config = use_native_modules!(config_command)
   config[:reactNativePath] ||= '../node_modules/react-native'
-  config[:reactNativeCodegenPath] ||= '../node_modules/react-native-codegen'
 
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
 
-  # Core RN/Expo pods
-  pod 'React', :path => '../node_modules/react-native/'
-  pod 'React-Core', :path => '../node_modules/react-native/React-Core', :modular_headers => true, :version => '0.83.1'
-  pod 'React-RCTAppDelegate', :path => '../node_modules/react-native/React-RCTAppDelegate'
-  pod 'React-RCTFabric', :path => '../node_modules/react-native/React-RCTFabric'
-  pod 'React-Codegen', :path => '../node_modules/react-native/React-Codegen'
-  pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
-  pod 'FBLazyVector', :path => '../node_modules/react-native/Libraries/FBLazyVector'
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => (podfile_properties['expo.jsEngine'] != 'jsc'),
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
 
-  # Dynamically locate FBReactNativeSpec podspec for all RN/Expo versions
-  fb_spec_paths = [
-    '../node_modules/react-native/FBReactNativeSpec',
-    '../node_modules/react-native/React/FBReactNativeSpec'
-  ]
-  fb_spec_found = fb_spec_paths.find { |p| File.exist?(File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__)) }
-  if fb_spec_found
-    pod 'FBReactNativeSpec', :path => fb_spec_found
-  else
-    puts "\n[Podfile WARNING] FBReactNativeSpec.podspec not found (checked: #{fb_spec_paths.map { |p| File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__) }.join(', ')}).\nIf this is an Expo prebuilt app, this is safe to ignore."
-  end
-
-  # Other RN pods (ensure all paths match your node_modules layout)
-  pod 'RCTRequired', :path => '../node_modules/react-native/Libraries/RCTRequired'
-  pod 'RCTTypeSafety', :path => '../node_modules/react-native/Libraries/TypeSafety'
-  pod 'ReactCommon', :path => '../node_modules/react-native/ReactCommon'
-  pod 'React-graphics', :path => '../node_modules/react-native/Libraries/Renderer/React-graphics'
-  pod 'React-utils', :path => File.expand_path('../custom_podspecs', __dir__)
-  pod 'React-debug', :path => '../node_modules/react-native/Libraries/Utilities/React-debug'
-  pod 'React-ImageManager', :path => '../node_modules/react-native/Libraries/Image/React-ImageManager'
-  pod 'React-rendererdebug', :path => '../node_modules/react-native/Libraries/Renderer/React-rendererdebug'
-  pod 'React-jsi', :path => '../node_modules/react-native/ReactCommon/jsi'
-  pod 'React-renderercss', :path => '../node_modules/react-native/Libraries/Renderer/React-renderercss'
-  pod 'ReactAppDependencyProvider', :path => './ReactAppDependencyProvider.podspec'
-
-  # Explicit pods for iOS modules
-  pod 'React-RCTActionSheet', :path => '../node_modules/react-native/Libraries/ActionSheetIOS'
-  pod 'React-RCTAnimation', :path => '../node_modules/react-native/Libraries/NativeAnimation'
-  pod 'React-RCTBlob', :path => '../node_modules/react-native/Libraries/Blob'
-  pod 'React-RCTImage', :path => '../node_modules/react-native/Libraries/Image'
-  pod 'React-RCTLinking', :path => '../node_modules/react-native/Libraries/LinkingIOS'
-  pod 'React-RCTNetwork', :path => '../node_modules/react-native/Libraries/Network'
-  pod 'React-RCTSettings', :path => '../node_modules/react-native/Libraries/Settings'
-  pod 'React-RCTText', :path => '../node_modules/react-native/Libraries/Text'
-  pod 'React-RCTVibration', :path => '../node_modules/react-native/Libraries/Vibration'
-
-  puts "React-utils path: #{File.expand_path('../node_modules/react-native/Libraries/Utilities', __dir__)}"
-  puts "React-utils podspec exists: #{File.exist?(File.expand_path('../node_modules/react-native/Libraries/Utilities/React-utils.podspec', __dir__))}"
-
-  # Add StableDiffusion dependency
-  pod 'StableDiffusion', :path => File.expand_path('../ios/ml-stable-diffusion/swift/StableDiffusion', __dir__)
-
-  pre_install do |installer|
-    installer.pod_targets.each do |pod|
-      if pod.name.eql?('FBReactNativeSpec')
-        def pod.build_type;
-          Pod::BuildType.static_library
-        end
-      end
-    end
-  end
+  # ✅ Your CoreML / StableDiffusion pod
+  pod 'StableDiffusion', :path => File.expand_path('ml-stable-diffusion/swift/StableDiffusion', __dir__)
 
   post_install do |installer|
-    react_native_post_install(
-      installer,
-      config[:reactNativePath],
-      :mac_catalyst_enabled => false,
-      :ccache_enabled => ccache_enabled?(podfile_properties),
-    )
+    react_native_post_install(installer, config[:reactNativePath], :mac_catalyst_enabled => false)
   end
 end
