@@ -9,17 +9,19 @@ on:
 
 jobs:
   setup-and-deploy:
-    runs-on: macos-15
+    runs-on: macos-14
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: List available Xcode versions
-        run: ls /Applications | grep Xcode
-
-      # Uncomment and update the following step after checking the log output for the correct Xcode 15.x path
-      # - name: Select Xcode 15.x
-      #   run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      - name: Select Xcode 15.4 (CocoaPods-friendly)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la /Applications | grep -E "Xcode" || true
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          xcodebuild -version
 
       - name: Detect project root (where package.json lives)
         shell: bash
@@ -46,8 +48,6 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ImageForge-main/package-lock.json
-            ios/package-lock.json
-            ImageForge-main/ios/package-lock.json
 
       - name: Install Node dependencies (root)
         shell: bash
@@ -56,32 +56,47 @@ jobs:
           cd "$PROJECT_DIR"
           npm ci || npm install
 
-      - name: Symlink node_modules for Podfile lookup (if missing)
+      - name: Ensure ios/node_modules points to root node_modules (Podfile lookup)
         shell: bash
         run: |
-          if [ ! -e "$PROJECT_DIR/ios/node_modules" ]; then
-            ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
+          set -euo pipefail
+          if [ -d "$PROJECT_DIR/ios" ]; then
+            if [ ! -e "$PROJECT_DIR/ios/node_modules" ]; then
+              ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
+            fi
           fi
-
-      # Remove manual codegen step; Expo handles this
 
       - name: Install Ruby gems (Bundler)
         shell: bash
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR/ios"
+          ruby -v
+          gem -v
           gem install bundler
-          bundle install
+          bundle config set path vendor/bundle
+          bundle install --jobs 4 --retry 3
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Create Xcode project
+      - name: Install XcodeGen (if project.yml exists)
         shell: bash
         run: |
           set -euo pipefail
-          cd "$PROJECT_DIR/ios"
-          xcodegen generate
+          if [ -f "$PROJECT_DIR/ios/project.yml" ]; then
+            brew install xcodegen
+          else
+            echo "No ios/project.yml found; skipping XcodeGen."
+          fi
+
+      - name: Create Xcode project (if project.yml exists)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "$PROJECT_DIR/ios/project.yml" ]; then
+            cd "$PROJECT_DIR/ios"
+            xcodegen generate --use-cache
+          else
+            echo "No ios/project.yml found; skipping xcodegen generate."
+          fi
 
       - name: Install Pods
         shell: bash
@@ -89,6 +104,8 @@ jobs:
           set -euo pipefail
           rm -rf ~/Library/Developer/Xcode/DerivedData
           cd "$PROJECT_DIR/ios"
+          bundle exec pod --version
+          bundle exec pod repo update
           bundle exec pod install --verbose
 
       - name: Fail on Errors
