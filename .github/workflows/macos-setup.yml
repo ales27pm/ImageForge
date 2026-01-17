@@ -21,15 +21,16 @@ jobs:
           set -euo pipefail
           if [ -f "${GITHUB_WORKSPACE}/package.json" ]; then
             echo "PROJECT_DIR=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+            echo "Using PROJECT_DIR=${GITHUB_WORKSPACE}"
           elif [ -f "${GITHUB_WORKSPACE}/ImageForge-main/package.json" ]; then
             echo "PROJECT_DIR=${GITHUB_WORKSPACE}/ImageForge-main" >> "$GITHUB_ENV"
+            echo "Using PROJECT_DIR=${GITHUB_WORKSPACE}/ImageForge-main"
           else
             echo "ERROR: package.json not found in repo root or ImageForge-main/"
             echo "Repo contents:"
             ls -la "${GITHUB_WORKSPACE}"
             exit 1
           fi
-          echo "Using PROJECT_DIR=$PROJECT_DIR"
 
       - name: Set up Node
         uses: actions/setup-node@v4
