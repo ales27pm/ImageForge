@@ -89,25 +89,34 @@ jobs:
       - name: Configure Expo
         run: expo prebuild --platform ios
 
-      - name: Build iOS app
+      - name: Ensure Xcode Command Line Tools are Installed
+        run: |
+          xcode-select --install || echo "Xcode Command Line Tools already installed."
+
+      - name: Set Up Fastlane for Deployment
+        run: |
+          gem install fastlane
+
+      - name: Build and Archive iOS App
         run: |
           cd ios
           xcodebuild -workspace ImageForge.xcworkspace \
             -scheme ImageForge \
             -sdk iphoneos \
-            -configuration AppStoreDistribution \
+            -configuration Release \
             -archivePath $PWD/build/ImageForge.xcarchive archive
 
-      - name: Export iOS app for App Store
+      - name: Export iOS App for App Store
         run: |
+          cd ios
           xcodebuild -exportArchive \
-            -archivePath ios/build/ImageForge.xcarchive \
-            -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath ios/build
+            -archivePath build/ImageForge.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build
 
-      - name: Authenticate with App Store Connect using Fastlane
+      - name: Deploy to App Store Connect
         run: |
-          gem install fastlane
+          cd ios
           fastlane pilot upload \
             --api_key_path ${{ secrets.APP_STORE_API_KEY_PATH }} \
-            --ipa ios/build/ImageForge.ipa
+            --ipa build/ImageForge.ipa
