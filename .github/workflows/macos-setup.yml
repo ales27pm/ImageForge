@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Install Node.js dependencies
         run: |
-          cd ${{ github.workspace }}
+          cd ${{ github.workspace }}/..
           npm install
       - name: Install Node.js dependencies (ios)
         run: |
