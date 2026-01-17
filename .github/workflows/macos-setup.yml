@@ -120,3 +120,28 @@ jobs:
           fastlane pilot upload \
             --api_key_path ${{ secrets.APP_STORE_API_KEY_PATH }} \
             --ipa build/ImageForge.ipa
+
+      - name: Update Homebrew
+        run: |
+          brew update
+
+      - name: Clean Build Directory
+        run: |
+          cd ios
+          rm -rf DerivedData
+
+      - name: Run Unit Tests
+        run: |
+          cd ios
+          xcodebuild test -project AIImageForge.xcodeproj -scheme AIImageForge -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 14' -configuration Debug
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: ios/build/Debug-iphonesimulator/AIImageForge.app
+
+      - name: Fail on Errors
+        if: failure()
+        run: |
+          echo "Workflow failed. Please check the logs."

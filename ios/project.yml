@@ -19,3 +19,13 @@ targets:
       - ml-stable-diffusion/assets
     dependencies:
       - framework: StableDiffusion.framework
+        embed: true
+    buildSettings:
+      FRAMEWORK_SEARCH_PATHS: "$(PROJECT_DIR)/ml-stable-diffusion/swift/StableDiffusion"
+    buildPhases:
+      - name: Link Binary With Libraries
+        files:
+          - StableDiffusion.framework
+      - name: Embed Frameworks
+        files:
+          - StableDiffusion.framework
