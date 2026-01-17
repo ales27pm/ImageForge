@@ -45,18 +45,18 @@ jobs:
           pod init
           pod install
 
+      - name: Upload generated files
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-generated-files
+          path: ios/
+
       - name: Debug file paths
         run: |
           echo "Listing contents of current directory:"
           ls -R
           echo "Listing contents of ios directory:"
           ls -R ios
-
-      - name: Upload generated files
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-generated-files
-          path: ios/
 
       - name: Add Apple Stable Diffusion Package
         run: |
