@@ -16,6 +16,7 @@ jobs:
     steps:
       - name: Install Node.js dependencies
         run: |
+          cd ${{ github.workspace }}
           npm install
       - name: Checkout repository
         uses: actions/checkout@v3
