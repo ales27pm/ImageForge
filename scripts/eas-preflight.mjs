@@ -142,17 +142,17 @@ function checkEasJson() {
   if (!existsSync('eas.json')) fail('eas.json missing.');
   const eas = readJson('eas.json');
   if (!eas) fail('Could not parse eas.json');
-  let iosProfiles = Object.entries(eas.build || {}).filter(([k, v]) => v?.platform === 'ios' || k === 'ios' || k.includes('ios'));
+  let iosProfiles = Object.entries(eas.build || {}).filter(([k, v]) => v && typeof v === 'object' && v.ios);
   if (!iosProfiles.length) fail('No iOS build profiles in eas.json');
   let ok = false;
   for (const [k, v] of iosProfiles) {
     if (v.credentialsSource !== 'remote') {
-      fail(`eas.json profile ${k} must set credentialsSource: "remote" for iOS.`);
+      fail(`eas.json profile ${k} must set credentialsSource: \"remote\" for iOS.`);
     }
     ok = true;
   }
-  if (!ok) fail('No iOS profile with credentialsSource: "remote".');
-  log('All iOS profiles use credentialsSource: "remote".');
+  if (!ok) fail('No iOS profile with credentialsSource: \"remote\".');
+  log('All iOS profiles use credentialsSource: \"remote\".');
   return { iosProfiles };
 }
 
