@@ -5,10 +5,7 @@ require 'json'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
 def ccache_enabled?(podfile_properties)
-  # Environment variable takes precedence
   return ENV['USE_CCACHE'] == '1' if ENV['USE_CCACHE']
-  
-  # Fall back to Podfile properties
   podfile_properties['apple.ccacheEnabled'] == 'true'
 end
 
@@ -38,10 +35,7 @@ target 'AIImageForge' do
     ]
   end
 
-  # Ensure config is initialized
   config = use_native_modules! unless defined?(config)
-
-  # Debug and fallback for config
   puts "Config: #{config.inspect}"
   config ||= {}
   config[:reactNativePath] ||= '../node_modules/react-native'
@@ -50,7 +44,7 @@ target 'AIImageForge' do
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
 
-  # Manually configure React Native dependencies
+  # Core RN/Expo pods
   pod 'React', :path => '../node_modules/react-native/'
   pod 'React-Core', :path => '../node_modules/react-native/React-Core', :modular_headers => true, :version => '0.83.1'
   pod 'React-RCTAppDelegate', :path => '../node_modules/react-native/React-RCTAppDelegate'
@@ -58,20 +52,20 @@ target 'AIImageForge' do
   pod 'React-Codegen', :path => '../node_modules/react-native/React-Codegen'
   pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
   pod 'FBLazyVector', :path => '../node_modules/react-native/Libraries/FBLazyVector'
-  
-  # --------- FIX: Robust path search for FBReactNativeSpec podspec ---------
+
+  # Dynamically locate FBReactNativeSpec podspec for all RN/Expo versions
   fb_spec_paths = [
     '../node_modules/react-native/FBReactNativeSpec',
     '../node_modules/react-native/React/FBReactNativeSpec'
   ]
-  fb_spec_path = fb_spec_paths.find { |p| File.exist?(File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__)) }
-  if fb_spec_path
-    pod 'FBReactNativeSpec', :path => fb_spec_path
+  fb_spec_found = fb_spec_paths.find { |p| File.exist?(File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__)) }
+  if fb_spec_found
+    pod 'FBReactNativeSpec', :path => fb_spec_found
   else
-    raise "[!] Could not find FBReactNativeSpec.podspec; checked: #{fb_spec_paths.map { |p| File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__) }.join(', ')}"
+    puts "\n[Podfile WARNING] FBReactNativeSpec.podspec not found (checked: #{fb_spec_paths.map { |p| File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__) }.join(', ')}).\nIf this is an Expo prebuilt app, this is safe to ignore."
   end
-  # -------------------------------------------------------------------------
 
+  # Other RN pods (ensure all paths match your node_modules layout)
   pod 'RCTRequired', :path => '../node_modules/react-native/Libraries/RCTRequired'
   pod 'RCTTypeSafety', :path => '../node_modules/react-native/Libraries/TypeSafety'
   pod 'ReactCommon', :path => '../node_modules/react-native/ReactCommon'
@@ -84,45 +78,27 @@ target 'AIImageForge' do
   pod 'React-renderercss', :path => '../node_modules/react-native/Libraries/Renderer/React-renderercss'
   pod 'ReactAppDependencyProvider', :path => './ReactAppDependencyProvider.podspec'
 
-  # Explicitly include React-RCTActionSheet
+  # Explicit pods for iOS modules
   pod 'React-RCTActionSheet', :path => '../node_modules/react-native/Libraries/ActionSheetIOS'
-
-  # Explicitly include React-RCTAnimation
   pod 'React-RCTAnimation', :path => '../node_modules/react-native/Libraries/NativeAnimation'
-
-  # Explicitly include React-RCTBlob
   pod 'React-RCTBlob', :path => '../node_modules/react-native/Libraries/Blob'
-
-  # Explicitly include React-RCTImage
   pod 'React-RCTImage', :path => '../node_modules/react-native/Libraries/Image'
-
-  # Explicitly include React-RCTLinking
   pod 'React-RCTLinking', :path => '../node_modules/react-native/Libraries/LinkingIOS'
-
-  # Explicitly include React-RCTNetwork
   pod 'React-RCTNetwork', :path => '../node_modules/react-native/Libraries/Network'
-
-  # Explicitly include React-RCTSettings
   pod 'React-RCTSettings', :path => '../node_modules/react-native/Libraries/Settings'
-
-  # Explicitly include React-RCTText
   pod 'React-RCTText', :path => '../node_modules/react-native/Libraries/Text'
-
-  # Explicitly include React-RCTVibration
   pod 'React-RCTVibration', :path => '../node_modules/react-native/Libraries/Vibration'
 
-  # Debugging paths for React-utils
   puts "React-utils path: #{File.expand_path('../node_modules/react-native/Libraries/Utilities', __dir__)}"
   puts "React-utils podspec exists: #{File.exist?(File.expand_path('../node_modules/react-native/Libraries/Utilities/React-utils.podspec', __dir__))}"
 
   # Add StableDiffusion dependency
   pod 'StableDiffusion', :path => File.expand_path('../ios/ml-stable-diffusion/swift/StableDiffusion', __dir__)
 
-  # Add workaround for FBReactNativeSpec issue
   pre_install do |installer|
     installer.pod_targets.each do |pod|
       if pod.name.eql?('FBReactNativeSpec')
-        def pod.build_type; # Uncomment to enable static framework
+        def pod.build_type;
           Pod::BuildType.static_library
         end
       end
