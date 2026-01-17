@@ -58,7 +58,20 @@ target 'AIImageForge' do
   pod 'React-Codegen', :path => '../node_modules/react-native/React-Codegen'
   pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
   pod 'FBLazyVector', :path => '../node_modules/react-native/Libraries/FBLazyVector'
-  pod 'FBReactNativeSpec', :path => '../node_modules/react-native/React/FBReactNativeSpec'
+  
+  # --------- FIX: Robust path search for FBReactNativeSpec podspec ---------
+  fb_spec_paths = [
+    '../node_modules/react-native/FBReactNativeSpec',
+    '../node_modules/react-native/React/FBReactNativeSpec'
+  ]
+  fb_spec_path = fb_spec_paths.find { |p| File.exist?(File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__)) }
+  if fb_spec_path
+    pod 'FBReactNativeSpec', :path => fb_spec_path
+  else
+    raise "[!] Could not find FBReactNativeSpec.podspec; checked: #{fb_spec_paths.map { |p| File.expand_path("#{p}/FBReactNativeSpec.podspec", __dir__) }.join(', ')}"
+  end
+  # -------------------------------------------------------------------------
+
   pod 'RCTRequired', :path => '../node_modules/react-native/Libraries/RCTRequired'
   pod 'RCTTypeSafety', :path => '../node_modules/react-native/Libraries/TypeSafety'
   pod 'ReactCommon', :path => '../node_modules/react-native/ReactCommon'
