@@ -59,7 +59,7 @@ target 'AIImageForge' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-    # --- Xcode 16 cycle prevention: break ReactCodegen ↔ app target dependency ---
+    # --- BREAK ReactCodegen ↔ app target cycle (Xcode archive) ---
     # This neutralizes dependency inference for ReactCodegen's codegen script phase.
     installer.pods_project.targets.each do |t|
       next unless t.name == 'ReactCodegen'

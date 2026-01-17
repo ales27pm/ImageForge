@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "env": {
+    "node": "v25.2.0",
+    "platform": "linux",
+    "env": {}
+  },
+  "versions": {
+    "expo": "54.0.31",
+    "rn": "0.81.x",
+    "react": "19.1.0",
+    "sdkMajor": "54",
+    "expectedRn": "0.81"
+  },
+  "iosConfig": {
+    "configFile": "app.json",
+    "bundleIdentifier": "com.aiimageforge.app",
+    "teamId": "52T7P32J34"
+  },
+  "eas": {
+    "iosProfiles": [
+      [
+        "production",
+        {
+          "platform": "ios",
+          "distribution": "store",
+          "autoIncrement": true,
+          "credentialsSource": "remote",
+          "ios": {
+            "resourceClass": "m-medium"
+          }
+        }
+      ],
+      [
+        "internal",
+        {
+          "platform": "ios",
+          "distribution": "internal",
+          "credentialsSource": "remote",
+          "ios": {
+            "simulator": false
+          }
+        }
+      ]
+    ]
+  },
+  "podfile": {
+    "markerFound": true
+  },
+  "landmines": {
+    "jimpLandmine": false
+  }
+}

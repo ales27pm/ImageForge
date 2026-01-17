@@ -36,11 +36,13 @@ function ok(ctx) {
 function checkNodeEnv() {
   logSection('Environment');
   const node = process.version;
-  const npm = (() => {
-    try {
-      return require('child_process').execSync('npm -v').toString().trim();
-    } catch { return undefined; }
-  })();
+  let npm;
+  try {
+    npm = require('child_process').execSync('npm -v').toString().trim();
+  } catch (e) {
+    log('[WARN] npm -v failed: ' + (e && e.message ? e.message : e));
+    npm = undefined;
+  }
   const platform = process.platform;
   const env = {
     EAS_BUILD_PLATFORM: getEnv('EAS_BUILD_PLATFORM'),
@@ -62,8 +64,11 @@ function checkNodeEnv() {
     } catch {
       fail('xcodebuild not available on macOS runner.', { details: 'Missing xcodebuild' });
     }
+    if (!node || !npm) fail('Missing node or npm.', { details: { node, npm } });
+  } else {
+    if (!node) fail('Missing node.', { details: { node, npm } });
+    if (!npm) log('[WARN] npm not found, but not required on non-macOS platform.');
   }
-  if (!node || !npm) fail('Missing node or npm.', { details: { node, npm } });
   return { node, npm, platform, env: redactEnv(env) };
 }
 
