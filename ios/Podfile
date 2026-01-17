@@ -36,7 +36,7 @@ target 'AIImageForge' do
   )
 
   # ✅ Your CoreML / StableDiffusion pod
-  pod 'StableDiffusion', :path => File.expand_path('ml-stable-diffusion/swift/StableDiffusion', __dir__)
+  pod 'react-native-ml-stable-diffusion', :path => File.expand_path('ml-stable-diffusion/swift/StableDiffusion', __dir__)
 
   post_install do |installer|
     react_native_post_install(installer, config[:reactNativePath], :mac_catalyst_enabled => false)
