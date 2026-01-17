@@ -17,7 +17,9 @@
     "format": "prettier --write \"**/*.{js,ts,tsx,css,json}\"",
     "test": "jest",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "eas-build-pre-install": "node ./scripts/eas-preflight.mjs",
+    "preflight:ios": "node ./scripts/eas-preflight.mjs --platform ios --strict"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",

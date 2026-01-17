@@ -59,27 +59,17 @@ target 'AIImageForge' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-    # --- BREAK ReactCodegen ↔ app target cycle (Xcode archive) ---
+    # --- Xcode 16 cycle prevention: break ReactCodegen ↔ app target dependency ---
+    # This neutralizes dependency inference for ReactCodegen's codegen script phase.
     installer.pods_project.targets.each do |t|
       next unless t.name == 'ReactCodegen'
-
-      t.build_phases.each do |phase|
-        next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
-        next unless phase.name&.include?('Generate Specs')
-
-        if phase.respond_to?(:input_paths) && phase.input_paths
-          phase.input_paths.reject! do |p|
-            p.include?('ExpoModulesProvider.swift') ||
-            p.include?('Pods-AIImageForge')
-          end
-        end
-
-        if phase.respond_to?(:output_paths) && phase.output_paths
-          phase.output_paths.reject! do |p|
-            p.include?('ExpoModulesProvider.swift') ||
-            p.include?('Pods-AIImageForge')
-          end
-        end
+      t.shell_script_build_phases.each do |phase|
+        next unless phase.name&.match?(/Generate|Codegen|Specs/)
+        # Xcode 16: prevent cycle by clearing input/output paths and always running the script
+        phase.input_paths = []
+        phase.output_paths = []
+        phase.always_out_of_date = true # disables dependency analysis for this phase
+        # (Required for Xcode 16+ to avoid archive-time build graph cycles)
       end
     end
     # --- Set DEVELOPMENT_TEAM and CODE_SIGN_STYLE for all pod targets (CI signing support) ---
