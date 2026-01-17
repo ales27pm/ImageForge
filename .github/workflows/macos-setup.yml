@@ -101,6 +101,29 @@ jobs:
           bundle exec pod repo update
           bundle exec pod install --verbose
 
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: EAS Build iOS (production)
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          cd "$PROJECT_DIR"
+          eas build --platform ios --non-interactive --profile production
+
+      - name: EAS Submit to App Store Connect
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd "$PROJECT_DIR"
+          eas submit --platform ios --latest --non-interactive \
+            --apple-id "$APPLE_ID" \
+            --apple-team-id "$APPLE_TEAM_ID" \
+            --asc-app-specific-password "$APPLE_APP_SPECIFIC_PASSWORD"
+
       - name: Fail on Errors
         if: failure()
         run: echo "Workflow failed. Please check the logs."
