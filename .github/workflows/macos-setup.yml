@@ -86,4 +86,6 @@ on:
               set -euo pipefail
               cd "$PROJECT_DIR/ios"
               pod install
-          echo "Workflow failed. Please check the logs."
+      - name: Fail on Errors
+        if: failure()
+        run: echo "Workflow failed. Please check the logs."
