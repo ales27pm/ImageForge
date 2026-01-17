@@ -1,0 +1,8 @@
+{
+  "name": "react-native-ml-stable-diffusion",
+  "version": "1.0.0",
+  "description": "Stable Diffusion with Core ML on Apple Silicon for React Native. Using apple/ml-stable-diffusion and Hugging Face open source models.",
+  "homepage": "https://github.com/jeongshin/react-native-ml-stable-diffusion",
+  "license": "MIT",
+  "author": "jeongshin"
+}
