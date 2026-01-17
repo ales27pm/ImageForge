@@ -10,6 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
+        - name: Install Node.js dependencies (ios)
+          run: |
+            cd ios
+            npm install
   setup-and-deploy:
     name: Setup and Deploy macOS App
     runs-on: macos-latest
