@@ -105,6 +105,17 @@ target 'AIImageForge' do
   # Add StableDiffusion dependency
   pod 'StableDiffusion', :path => File.expand_path('../ios/ml-stable-diffusion/swift/StableDiffusion', __dir__)
 
+  # Add workaround for FBReactNativeSpec issue
+  pre_install do |installer|
+    installer.pod_targets.each do |pod|
+      if pod.name.eql?('FBReactNativeSpec')
+        def pod.build_type; # Uncomment to enable static framework
+          Pod::BuildType.static_library
+        end
+      end
+    end
+  end
+
   post_install do |installer|
     react_native_post_install(
       installer,

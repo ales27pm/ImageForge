@@ -14,7 +14,14 @@
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to save generated images.",
-        "NSCameraUsageDescription": "This app requires access to your camera to capture images."
+        "NSCameraUsageDescription": "This app requires access to your camera to capture images.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "aiimageforge"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -42,6 +49,11 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a3490a3d-d05f-41bb-a490-c5e69da17618"
+      }
+    }
   }
 }

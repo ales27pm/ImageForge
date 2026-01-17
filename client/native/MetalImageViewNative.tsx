@@ -4,7 +4,7 @@ import {
   UIManager,
   type ViewProps,
 } from "react-native";
-import codegenNativeComponent from "react-native/Libraries/Utilities/codegenNativeComponent";
+import { codegenNativeComponent } from "react-native";
 
 export type MetalImageViewProps = ViewProps & {
   imageUri?: string;

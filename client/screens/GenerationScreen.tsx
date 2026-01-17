@@ -183,7 +183,10 @@ export default function GenerationScreen({ navigation }: Props) {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <HeaderButton onPress={() => navigation.goBack()} pressColor="transparent">
+        <HeaderButton
+          onPress={() => navigation.goBack()}
+          pressColor="transparent"
+        >
           <ThemedText style={{ color: Colors.dark.text }}>Close</ThemedText>
         </HeaderButton>
       ),
@@ -250,6 +253,10 @@ export default function GenerationScreen({ navigation }: Props) {
             guidanceScale,
           });
 
+      if (!result || !result.fileUri) {
+        throw new Error("Invalid generation result");
+      }
+
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
         prompt: cleanPrompt,
@@ -268,8 +275,13 @@ export default function GenerationScreen({ navigation }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         () => {},
       );
-    } catch (e) {
-      console.error("Generation error:", e);
+    } catch (unknownError) {
+      console.error("Generation error:", unknownError);
+      const errorMessage =
+        unknownError instanceof Error
+          ? unknownError.message
+          : String(unknownError);
+      console.error("Detailed error:", errorMessage);
       setState("idle");
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
@@ -278,7 +290,7 @@ export default function GenerationScreen({ navigation }: Props) {
 
       Alert.alert(
         "Generation Failed",
-        "Unable to generate an image. Please try again.",
+        errorMessage || "Unable to generate an image. Please try again.",
         [{ text: "OK" }],
       );
     } finally {
@@ -385,9 +397,7 @@ export default function GenerationScreen({ navigation }: Props) {
                   maximumValue={20}
                   step={0.5}
                   value={guidanceScale}
-                  onValueChange={(v) =>
-                    setGuidanceScale(Math.round(v * 2) / 2)
-                  }
+                  onValueChange={(v) => setGuidanceScale(Math.round(v * 2) / 2)}
                   minimumTrackTintColor={Colors.dark.primary}
                   maximumTrackTintColor={Colors.dark.backgroundSecondary}
                   thumbTintColor={Colors.dark.primary}
