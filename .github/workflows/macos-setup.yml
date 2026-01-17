@@ -14,9 +14,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debug - List workspace files
-        run: ls -la "${GITHUB_WORKSPACE}"
-
       - name: Detect project root (where package.json lives)
         shell: bash
         run: |
@@ -52,12 +49,13 @@ jobs:
           cd "$PROJECT_DIR"
           npm ci || npm install
 
-      - name: Install Node dependencies (ios)
+      # Optionally symlink node_modules for Podfile lookup
+      - name: Symlink node_modules for Podfile lookup (if missing)
         shell: bash
         run: |
-          set -euo pipefail
-          cd "$PROJECT_DIR/ios"
-          npm ci || npm install
+          if [ ! -e "$PROJECT_DIR/ios/node_modules" ]; then
+            ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
+          fi
 
       - name: Set up Ruby for CocoaPods
         uses: ruby/setup-ruby@v1
