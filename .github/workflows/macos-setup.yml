@@ -49,20 +49,28 @@ jobs:
           cd "$PROJECT_DIR"
           npm ci || npm install
 
-      # Generate codegen specs, needed for new React Native versions
-      - name: Generate codegen specs (if needed)
-        shell: bash
-        run: |
-          cd "$PROJECT_DIR"
-          npx react-native-codegen || echo "react-native-codegen not needed/skipped"
+      # --- REMOVE iOS npm install: not needed unless you have an ios/package.json ---
+      # - name: Install Node dependencies (ios)
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
+      #     cd "$PROJECT_DIR/ios"
+      #     npm ci || npm install
 
-      # Optionally symlink node_modules for Podfile lookup (RN/Expo)
+      # Symlink node_modules if needed for Podfile/Expo/React Native (no-op if already exists)
       - name: Symlink node_modules for Podfile lookup (if missing)
         shell: bash
         run: |
           if [ ! -e "$PROJECT_DIR/ios/node_modules" ]; then
             ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
           fi
+
+      # If your project needs codegen (React Native 0.71+), enable this step:
+      - name: Generate codegen specs (if needed)
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR"
+          npx react-native-codegen || echo "codegen not needed or already run"
 
       - name: Set up Ruby for CocoaPods
         uses: ruby/setup-ruby@v1
