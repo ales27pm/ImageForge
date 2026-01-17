@@ -10,14 +10,13 @@ on:
   workflow_dispatch:
 
 jobs:
-        - name: Install Node.js dependencies
-          run: |
-            npm install
   setup-and-deploy:
     name: Setup and Deploy macOS App
     runs-on: macos-latest
-
     steps:
+      - name: Install Node.js dependencies
+        run: |
+          npm install
       - name: Checkout repository
         uses: actions/checkout@v3
 
