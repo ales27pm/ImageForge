@@ -49,15 +49,6 @@ jobs:
           cd "$PROJECT_DIR"
           npm ci || npm install
 
-      # --- REMOVE iOS npm install: not needed unless you have an ios/package.json ---
-      # - name: Install Node dependencies (ios)
-      #   shell: bash
-      #   run: |
-      #     set -euo pipefail
-      #     cd "$PROJECT_DIR/ios"
-      #     npm ci || npm install
-
-      # Symlink node_modules if needed for Podfile/Expo/React Native (no-op if already exists)
       - name: Symlink node_modules for Podfile lookup (if missing)
         shell: bash
         run: |
@@ -65,7 +56,6 @@ jobs:
             ln -s "$PROJECT_DIR/node_modules" "$PROJECT_DIR/ios/node_modules"
           fi
 
-      # If your project needs codegen (React Native 0.71+), enable this step:
       - name: Generate codegen specs (if needed)
         shell: bash
         run: |
@@ -81,6 +71,13 @@ jobs:
       - name: Install CocoaPods
         run: gem install cocoapods
 
+      - name: Clean CocoaPods cache and Pods directory
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR/ios"
+          pod cache clean --all || true
+          rm -rf Pods Podfile.lock
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -91,12 +88,12 @@ jobs:
           cd "$PROJECT_DIR/ios"
           xcodegen generate
 
-      - name: Install Pods
+      - name: Install Pods (with verbose log)
         shell: bash
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR/ios"
-          pod install
+          pod install --verbose
 
       - name: Fail on Errors
         if: failure()
