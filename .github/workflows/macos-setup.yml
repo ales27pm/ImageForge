@@ -9,19 +9,11 @@ on:
 
 jobs:
   setup-and-deploy:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Select Xcode 15.4 (CocoaPods-friendly)
-        shell: bash
-        run: |
-          set -euo pipefail
-          ls -la /Applications | grep -E "Xcode" || true
-          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-          xcodebuild -version
 
       - name: Detect project root (where package.json lives)
         shell: bash
