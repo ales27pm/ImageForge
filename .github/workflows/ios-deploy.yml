@@ -1,0 +1,52 @@
+name: iOS CI + Archive
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-archive:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 16 build tools
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Node deps
+        run: |
+          npm ci
+
+      - name: Install Ruby gems
+        run: |
+          cd ios
+          gem install bundler
+          bundle install
+
+      - name: Install Pods
+        run: |
+          cd ios
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          bundle exec pod install --repo-update
+
+      - name: Archive iOS
+        run: |
+          xcodebuild archive \
+            -workspace ios/AIImageForge.xcworkspace \
+            -scheme AIImageForge \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $HOME/Library/Developer/Xcode/Archives/AIImageForge.xcarchive \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES

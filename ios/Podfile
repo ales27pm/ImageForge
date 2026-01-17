@@ -63,11 +63,19 @@ target 'AIImageForge' do
     installer.pods_project.targets.each do |t|
       next unless t.name == 'ReactCodegen'
 
-      t.shell_script_build_phases.each do |phase|
-        next unless phase.name && phase.name.include?('Generate Specs')
+      t.build_phases.each do |phase|
+        next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+        next unless phase.name&.include?('Generate Specs')
 
         if phase.respond_to?(:input_paths) && phase.input_paths
-          phase.input_paths = phase.input_paths.reject do |p|
+          phase.input_paths.reject! do |p|
+            p.include?('ExpoModulesProvider.swift') ||
+            p.include?('Pods-AIImageForge')
+          end
+        end
+
+        if phase.respond_to?(:output_paths) && phase.output_paths
+          phase.output_paths.reject! do |p|
             p.include?('ExpoModulesProvider.swift') ||
             p.include?('Pods-AIImageForge')
           end

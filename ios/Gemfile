@@ -1,4 +1,7 @@
+
 source "https://rubygems.org"
 
-gem "cocoapods", "~> 1.15"
-gem "xcodeproj", ">= 1.25"
+# Pin CocoaPods and Xcodeproj for Xcode 16 compatibility
+gem "cocoapods", "~> 1.16.2"
+gem "xcodeproj", "~> 1.27"
+gem "bundler"
