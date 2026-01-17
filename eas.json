@@ -5,7 +5,6 @@
   },
   "build": {
     "production": {
-      "platform": "ios",
       "distribution": "store",
       "autoIncrement": true,
         "credentialsSource": "remote",
@@ -14,7 +13,6 @@
         }
     },
     "internal": {
-      "platform": "ios",
       "distribution": "internal",
         "credentialsSource": "remote",
         "ios": {

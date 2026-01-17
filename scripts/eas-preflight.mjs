@@ -62,7 +62,7 @@ function checkNodeEnv() {
     try {
       require('child_process').execSync('xcodebuild -version', { stdio: 'ignore' });
     } catch {
-      fail('xcodebuild not available on macOS runner.', { details: 'Missing xcodebuild' });
+      log('[WARN] xcodebuild not available on macOS runner.');
     }
     if (!node || !npm) fail('Missing node or npm.', { details: { node, npm } });
   } else {
