@@ -52,31 +52,46 @@ target 'AIImageForge' do
     :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
   )
 
-  post_install do |installer|
-    react_native_post_install(
-      installer,
-      config[:reactNativePath],
-      :mac_catalyst_enabled => false,
-      :ccache_enabled => ccache_enabled?(podfile_properties),
-    )
-    # --- BREAK ReactCodegen ↔ app target cycle (Xcode archive) ---
-    # This neutralizes dependency inference for ReactCodegen's codegen script phase.
-    installer.pods_project.targets.each do |t|
-      next unless t.name == 'ReactCodegen'
-      t.shell_script_build_phases.each do |phase|
-        next unless phase.name&.match?(/Generate|Codegen|Specs/)
-        # Xcode 16: prevent cycle by clearing input/output paths and always running the script
-        phase.input_paths = []
-        phase.output_paths = []
-        # (Required for Xcode 16+ to avoid archive-time build graph cycles)
+    # --- ReactCodegen script phase output log patch (fixes empty SCRIPT_OUTPUT_FILE_0 in CI) ---
+    post_install do |installer|
+      installer.pods_project.targets.each do |t|
+        next unless t.name == 'ReactCodegen'
+
+        t.shell_script_build_phases.each do |phase|
+          next unless phase.name == '[CP-User] Generate Specs'
+
+          phase.output_paths ||= []
+          log_path = '$(DERIVED_FILE_DIR)/generated/source/codegen/reactcodegen-script.log'
+
+          unless phase.output_paths.include?(log_path)
+            phase.output_paths << log_path
+          end
+        end
+      end
+      react_native_post_install(
+        installer,
+        config[:reactNativePath],
+        :mac_catalyst_enabled => false,
+        :ccache_enabled => ccache_enabled?(podfile_properties),
+      )
+      # --- BREAK ReactCodegen ↔ app target cycle (Xcode archive) ---
+      # This neutralizes dependency inference for ReactCodegen's codegen script phase.
+      installer.pods_project.targets.each do |t|
+        next unless t.name == 'ReactCodegen'
+        t.shell_script_build_phases.each do |phase|
+          next unless phase.name&.match?(/Generate|Codegen|Specs/)
+          # Xcode 16: prevent cycle by clearing input/output paths and always running the script
+          phase.input_paths = []
+          phase.output_paths = []
+          # (Required for Xcode 16+ to avoid archive-time build graph cycles)
+        end
+      end
+      # --- Set DEVELOPMENT_TEAM and CODE_SIGN_STYLE for all pod targets (CI signing support) ---
+      installer.pods_project.targets.each do |target|
+        target.build_configurations.each do |config|
+          config.build_settings['DEVELOPMENT_TEAM'] = ENV['APPLE_DEVELOPMENT_TEAM'] if ENV['APPLE_DEVELOPMENT_TEAM']
+          config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+        end
       end
     end
-    # --- Set DEVELOPMENT_TEAM and CODE_SIGN_STYLE for all pod targets (CI signing support) ---
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['DEVELOPMENT_TEAM'] = ENV['APPLE_DEVELOPMENT_TEAM'] if ENV['APPLE_DEVELOPMENT_TEAM']
-        config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
-      end
-    end
-  end
 end
