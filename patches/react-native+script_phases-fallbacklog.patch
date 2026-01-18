@@ -1,0 +1,45 @@
+diff --git a/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh b/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
+index 1111111..3333333 100755
+--- a/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
++++ b/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
+@@ setup_dirs () {
+-    set +e
+-    rm -rf "$GENERATED_SRCS_DIR"
+-    set -e
+-
+-    mkdir -p "$GENERATED_SRCS_DIR" "$TEMP_OUTPUT_DIR"
+-
+-    # Clear output files
+-    true > "${SCRIPT_OUTPUT_FILE_0}"
++    set +e
++    rm -rf "$GENERATED_SRCS_DIR"
++    set -e
++
++    mkdir -p "$GENERATED_SRCS_DIR" "$TEMP_OUTPUT_DIR"
++
++    # If Xcode didn't provide SCRIPT_OUTPUT_FILE_0 (no output files declared),
++    # write logs into DerivedData instead of dying on an empty redirection.
++    if [ -z "${SCRIPT_OUTPUT_FILE_0:-}" ]; then
++        SCRIPT_OUTPUT_FILE_0="$GENERATED_SRCS_DIR/react-codegen-script.log"
++    fi
++
++    # Clear output file
++    : > "${SCRIPT_OUTPUT_FILE_0}"
+@@ error () {
+-    echo "$1"
+-    "[Codegen] $1" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
+-    exit 1
++    echo "$1"
++    if [ -n "${SCRIPT_OUTPUT_FILE_0:-}" ]; then
++        echo "[Codegen] $1" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
++    fi
++    exit 1
+@@ describe () {
+-    message="\n\n    >>>>> $1\n\n    "
+-    if [ -n "${SCRIPT_OUTPUT_FILE_0:-}" ]; then
+-        echo "$message" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
+-    fi
++    message="\n\n    >>>>> $1\n\n    "
++    if [ -n "${SCRIPT_OUTPUT_FILE_0:-}" ]; then
++        echo "$message" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
++    fi
