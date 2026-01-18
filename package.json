@@ -20,7 +20,7 @@
     "ios": "expo run:ios",
     "eas-build-pre-install": "node ./scripts/eas-preflight.mjs",
     "preflight:ios": "node ./scripts/eas-preflight.mjs --platform ios --strict",
-    "postinstall": "bash ./scripts/patch-react-native-script-phases.sh"
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
@@ -89,7 +89,8 @@
     "jest": "^29.7.0",
     "prettier": "3.6.2",
     "ts-jest": "^29.4.1",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "patch-package": "^8.0.0"
   },
   "private": true,
   "nativeModules": {

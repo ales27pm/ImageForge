@@ -1,0 +1,16 @@
+diff --git a/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh b/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
+index 1111111..2222222 100755
+--- a/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
++++ b/node_modules/react-native/scripts/react_native_pods_utils/script_phases.sh
+@@ error () {
+-    echo "$1"
+-    "[Codegen] $1" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
+-    exit 1
++    echo "$1"
++    if [ -n "${SCRIPT_OUTPUT_FILE_0:-}" ]; then
++      echo "[Codegen] $1" >> "${SCRIPT_OUTPUT_FILE_0}" 2>&1
++    fi
++    exit 1
+@@ generateCodegenArtifactsFromSchema () {
+-    pushd "$RN_DIR" >/dev/null || exit 1
++    pushd "$RCT_SCRIPT_RN_DIR" >/dev/null || exit 1
